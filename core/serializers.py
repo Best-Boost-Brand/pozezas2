@@ -1,54 +1,42 @@
 from rest_framework import serializers
-from .models import (
-    User, Nomenklatura, Zahon, Chastyna,
-    Obladnannya, Vyprobuvannya, Access, Session
-)
+from .models import User, Brigade, Detachment, Equipment, Testing
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'chastyna']
-        read_only_fields = ['id']
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+    brigade = serializers.IntegerField(required=False, write_only=True)
+    detachments = serializers.ListField(
+        child=serializers.IntegerField(), required=False, write_only=True
+    )
 
-class NomenklaturaSerializer(serializers.ModelSerializer):
+class LoginResponseSerializer(serializers.Serializer):
+    session_id = serializers.CharField()
+    mode = serializers.CharField()
+    brigade = serializers.CharField()
+    detachments = serializers.ListField(child=serializers.CharField())
+
+class BrigadeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Nomenklatura
+        model = Brigade
         fields = ['id', 'name']
-        read_only_fields = ['id']
 
-class ZahonSerializer(serializers.ModelSerializer):
+class DetachmentSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Zahon
-        fields = ['id', 'name']
-        read_only_fields = ['id']
+        model = Detachment
+        fields = ['id', 'name', 'brigade', 'users']
 
-class ChastynaSerializer(serializers.ModelSerializer):
+class EquipmentSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Chastyna
-        fields = ['id', 'name', 'description', 'zahon']
-        read_only_fields = ['id']
+        model = Equipment
+        fields = ['id', 'code', 'name']
 
-class ObladnannyaSerializer(serializers.ModelSerializer):
+class TestingSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Obladnannya
-        fields = ['id', 'nomenklatura', 'inventory_number', 'description', 'chastyna']
-        read_only_fields = ['id']
+        model = Testing
+        fields = ['id', 'brigade', 'equipment', 'tested_by', 'tested_at', 'result', 'notes']
 
-class VyprobuvannyaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Vyprobuvannya
-        fields = ['id', 'obladnannya', 'test_date', 'result', 'next_test_date', 'act_url']
-        read_only_fields = ['id']
-
-class AccessSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Access
-        fields = ['id', 'user', 'zahon', 'chastyna', 'level']
-        read_only_fields = ['id']
-
-class SessionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Session
-        fields = ['id', 'user', 'token', 'ex_time']
-        read_only_fields = ['id']
-
+    def validate(self, data):
+        user = self.context['request'].user
+        if user.mode != 'GOD' and user.brigade != data['brigade']:
+            raise serializers.ValidationError("Ви не маєте доступу до цієї бригади.")
+        return data
