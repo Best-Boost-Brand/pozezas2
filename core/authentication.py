@@ -1,14 +1,24 @@
-from rest_framework import authentication, exceptions
+# authentication.py
 from django.utils import timezone
+from rest_framework.authentication import BaseAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from .models import UserSession
 
-class SessionAuthentication(authentication.BaseAuthentication):
+class SessionIDAuthentication(BaseAuthentication):
     def authenticate(self, request):
-        sid = request.headers.get('session-id')
-        if not sid:
+        auth_header = request.headers.get('Authorization')
+
+        if not auth_header or not auth_header.startswith('Bearer '):
             return None
+
+        session_id = auth_header.split(' ')[1]
+
         try:
-            sess = UserSession.objects.get(session_id=sid, expires__gt=timezone.now())
-            return (sess.user, None)
+            session = UserSession.objects.get(session_id=session_id)
         except UserSession.DoesNotExist:
-            raise exceptions.AuthenticationFailed('Invalid or expired session')
+            raise AuthenticationFailed('Invalid session ID')
+
+        if session.expires < timezone.now():
+            raise AuthenticationFailed('Session expired')
+
+        return (session.user, None)

@@ -12,12 +12,14 @@ from .serializers import (
     EquipmentSerializer, TestingSerializer
 )
 
-# Permissions
+# --- PERMISSIONS ---
+
 class IsGod(permissions.BasePermission):
     def has_permission(self, request, view):
         return getattr(request.user, 'mode', None) == 'GOD'
 
-# Login endpoint with brigade/detachment update
+# --- LOGIN ---
+
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -38,6 +40,7 @@ class LoginView(APIView):
                 user.brigade = b
             except Brigade.DoesNotExist:
                 return Response({'detail': 'Невірний ID частини'}, status=status.HTTP_400_BAD_REQUEST)
+
         # Update detachments if provided
         if 'detachments' in data:
             det_ids = data['detachments']
@@ -53,7 +56,6 @@ class LoginView(APIView):
         expires = timezone.now() + timedelta(hours=8)
         UserSession.objects.create(user=user, session_id=sid, expires=expires)
 
-        # Response
         resp = {
             'session_id': sid,
             'mode': user.mode,
@@ -62,7 +64,8 @@ class LoginView(APIView):
         }
         return Response(resp)
 
-# Admin endpoints
+# --- SUPERUSER: CREATE USER ---
+
 class AdminRegistrationView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsGod]
 
@@ -70,12 +73,33 @@ class AdminRegistrationView(APIView):
         data = request.data
         if data.get('password') != data.get('confirmPassword'):
             return Response({'detail': 'Паролі не співпадають'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(username=data['username']).exists():
+            return Response({'detail': 'Такий користувач вже існує'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             b = Brigade.objects.get(id=data['brigade'])
         except Brigade.DoesNotExist:
             return Response({'detail': 'Невірний ID частини'}, status=status.HTTP_400_BAD_REQUEST)
-        user = User.objects.create_user(username=data['username'], password=data['password'], brigade=b)
+
+        user = User.objects.create_user(
+            username=data['username'],
+            password=data['password'],
+            brigade=b,
+            mode=data.get('mode', 'RO')  # default RO
+        )
+
+        if 'detachments' in data:
+            det_ids = data['detachments']
+            dets = Detachment.objects.filter(id__in=det_ids)
+            if dets.count() != len(det_ids):
+                return Response({'detail': 'Невірні ID загонів'}, status=status.HTTP_400_BAD_REQUEST)
+            user.detachments.set(dets)
+
+        user.save()
         return Response({'id': user.id}, status=status.HTTP_201_CREATED)
+
+# --- SUPERUSER: CHANGE MODE ---
 
 class AdminModeChangeView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsGod]
@@ -85,28 +109,34 @@ class AdminModeChangeView(APIView):
             user = User.objects.get(id=request.data['userId'])
         except User.DoesNotExist:
             return Response({'detail': 'Користувач не знайдений'}, status=status.HTTP_404_NOT_FOUND)
+
         user.mode = request.data.get('mode', user.mode)
         user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# CRUD for Brigade and Detachment
+# --- CRUD BRIGADE ---
+
 class BrigadeViewSet(viewsets.ModelViewSet):
     queryset = Brigade.objects.all()
     serializer_class = BrigadeSerializer
     permission_classes = [permissions.IsAuthenticated, IsGod]
+
+# --- CRUD DETACHMENT ---
 
 class DetachmentViewSet(viewsets.ModelViewSet):
     queryset = Detachment.objects.all()
     serializer_class = DetachmentSerializer
     permission_classes = [permissions.IsAuthenticated, IsGod]
 
-# Equipment endpoints
+# --- CRUD EQUIPMENT (доступно всім увійшовшим) ---
+
 class EquipmentViewSet(viewsets.ModelViewSet):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-# Testing endpoints with queryset
+# --- CRUD TESTING (з фільтром по brigade для не-GOD) ---
+
 class TestingViewSet(viewsets.ModelViewSet):
     queryset = Testing.objects.all()
     serializer_class = TestingSerializer
