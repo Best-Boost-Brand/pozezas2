@@ -45,7 +45,8 @@ class Testing(models.Model):
     date = models.DateField()
     result = models.CharField(max_length=100)
     next_date = models.DateField()
-    file = models.FileField(upload_to='acts/', null=True, blank=True)  # ⬅️ нове поле
+    file = models.FileField(upload_to='acts/', null=True, blank=True)
+    tested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"{self.equipment.inventory_number} - {self.date}"

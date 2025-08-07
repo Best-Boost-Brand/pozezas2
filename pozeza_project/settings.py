@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'core',
+    'django_filters',
 ]
 
 
@@ -81,7 +82,7 @@ WSGI_APPLICATION = 'pozeza_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE':   'django.db.backends.mysql',
-        'NAME':     'pozeza2',
+        'NAME':     'pozezas',
         'USER':     'root',
         'PASSWORD': 'test_pass',
         'HOST':     'localhost',
@@ -143,6 +144,9 @@ REST_FRAMEWORK = {
      'DEFAULT_PERMISSION_CLASSES': [
          'rest_framework.permissions.IsAuthenticated',
      ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend'
+    ],
 }
 
 SIMPLE_JWT = {

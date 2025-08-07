@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
 import uuid
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import User, UserSession, Brigade, Detachment, Equipment, Testing
 from .serializers import (
@@ -140,15 +141,20 @@ class EquipmentViewSet(viewsets.ModelViewSet):
 class TestingViewSet(viewsets.ModelViewSet):
     queryset = Testing.objects.all()
     serializer_class = TestingSerializer
+    permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'id'
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = {
+        'equipment__type': ['exact', 'icontains'],
+        'equipment': ['exact'],  # додатково, для точного фільтрування
+    }
 
     def get_queryset(self):
         user = self.request.user
         if user.mode == 'GOD':
-            return super().get_queryset()
-        return super().get_queryset().filter(brigade=user.brigade)
+            return Testing.objects.all()
+        return Testing.objects.filter(equipment__brigade=user.brigade)
 
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update']:
-            return [permissions.IsAuthenticated()]
-        return [permissions.IsAuthenticated()]
+    def perform_create(self, serializer):
+        serializer.save(tested_by=self.request.user)
+
