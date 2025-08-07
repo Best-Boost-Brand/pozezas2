@@ -146,7 +146,7 @@ class TestingViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = {
         'equipment__type': ['exact', 'icontains'],
-        'equipment': ['exact'],  # додатково, для точного фільтрування
+        'equipment': ['exact'],
     }
 
     def get_queryset(self):
