@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import User, Brigade, Detachment, Equipment, Testing
 
+# -------- AUTH --------
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
@@ -12,9 +13,10 @@ class LoginSerializer(serializers.Serializer):
 class LoginResponseSerializer(serializers.Serializer):
     session_id = serializers.CharField()
     mode = serializers.CharField()
-    brigade = serializers.CharField()
+    brigade = serializers.CharField(allow_null=True)
     detachments = serializers.ListField(child=serializers.CharField())
 
+# -------- CORE --------
 class BrigadeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Brigade
@@ -23,21 +25,22 @@ class BrigadeSerializer(serializers.ModelSerializer):
 class DetachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Detachment
-        fields = ['id', 'name', 'brigade', 'users']
+        fields = ['id', 'name']
 
 class EquipmentSerializer(serializers.ModelSerializer):
+    brigade_name = serializers.CharField(source='brigade.name', read_only=True)
+
     class Meta:
         model = Equipment
-        fields = ['id', 'inventory_number', 'name', 'type', 'brigade']
-
+        fields = ['id', 'inventory_number', 'name', 'type', 'brigade', 'brigade_name']
 
 class TestingSerializer(serializers.ModelSerializer):
-    tested_by = serializers.StringRelatedField(read_only=True)
     brigade = serializers.SerializerMethodField()
+    equipment_type = serializers.CharField(source='equipment.type', read_only=True)
 
     class Meta:
         model = Testing
-        fields = ['id', 'equipment', 'brigade', 'tested_by', 'date', 'result', 'next_date', 'file']
+        fields = ['id', 'equipment', 'brigade', 'tested_by', 'date', 'result', 'next_date', 'file', 'equipment_type']
 
     def get_brigade(self, obj):
         return obj.equipment.brigade.name if obj.equipment and obj.equipment.brigade else None
