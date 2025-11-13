@@ -1,22 +1,21 @@
-from django.utils import timezone
 from rest_framework.authentication import BaseAuthentication
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework import exceptions
+from django.utils import timezone
 from .models import UserSession
 
 class SessionIDAuthentication(BaseAuthentication):
+    """
+    Читає заголовок 'session-id' і аутентифікує користувача через UserSession.
+    """
     def authenticate(self, request):
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
+        sid = request.META.get("HTTP_SESSION_ID") or request.headers.get("session-id")
+        if not sid:
             return None
-
-        session_id = auth_header.split(' ')[1]
-
         try:
-            session = UserSession.objects.get(session_id=session_id)
+            s = UserSession.objects.select_related("user").get(session_id=sid)
         except UserSession.DoesNotExist:
-            raise AuthenticationFailed('Invalid session ID')
-
-        if session.expires < timezone.now():
-            raise AuthenticationFailed('Session expired')
-
-        return (session.user, None)
+            raise exceptions.AuthenticationFailed("Session expired")
+        if not s.is_active():
+            s.delete()
+            raise exceptions.AuthenticationFailed("Session expired")
+        return (s.user, None)

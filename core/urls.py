@@ -1,25 +1,42 @@
-from django.urls import path, include
+from django.urls import path
 from rest_framework.routers import DefaultRouter
+
 from .views import (
-    LoginView, LogoutView, AdminRegistrationView, AdminModeChangeView,
-    BrigadeViewSet, DetachmentViewSet, EquipmentViewSet, TestingViewSet,
-    TestingByTypeView,
+    LoginView, LogoutView,
+    RegistrationView, BrigadeAdminView, DetachmentAdminView,
+    NomenclatureListCreate, NomenclatureCategories,
+    EquipmentViewSet, BrigadeEquipmentCreate, BrigadeEquipmentList,
+    EquipmentTypesPseudoView, JavaTestingEquipmentView, TestingByTypeTextView,
+    TestingViewSet,
 )
 
 router = DefaultRouter()
-router.register(r'brigades', BrigadeViewSet)
-router.register(r'detachments', DetachmentViewSet)
-router.register(r'equipment', EquipmentViewSet)
-router.register(r'testing', TestingViewSet)
+router.register(r'equipment', EquipmentViewSet, basename='equipment')
+router.register(r'testing', TestingViewSet, basename='testing')
 
 urlpatterns = [
-    path('login/', LoginView.as_view()),
-    path('logout/', LogoutView.as_view()),
-    path('admin/registration/', AdminRegistrationView.as_view()),
-    path('admin/mode/', AdminModeChangeView.as_view()),
+    path('login', LoginView.as_view()),
+    path('logout', LogoutView.as_view()),
 
-    # список випробувань конкретного типу (наприклад, /api/testing/драбини/)
-    path('testing/<str:etype>/', TestingByTypeView.as_view()),
+    # admin
+    path('admin/registration', RegistrationView.as_view()),
+    path('admin/brigade', BrigadeAdminView.as_view()),
+    path('admin/detachment', DetachmentAdminView.as_view()),
 
-    path('', include(router.urls)),
+    # nomenclature
+    path('nomenclature', NomenclatureListCreate.as_view()),
+    path('nomenclature/categories', NomenclatureCategories.as_view()),
+
+    # brigade equipment via nomenclature
+    path('brigade/<int:brigade_id>/equipment', BrigadeEquipmentCreate.as_view()),
+    path('brigade/<int:brigade_id>/equipment/list', BrigadeEquipmentList.as_view()),
+
+    # java-style testing
+    path('testing/equipments', EquipmentTypesPseudoView.as_view()),
+    path('testing/brigade/<int:brigade_id>/equipment/<int:equip_type_id>', JavaTestingEquipmentView.as_view()),
+
+    # text tabs
+    path('testing/<str:type_text>/', TestingByTypeTextView.as_view()),
 ]
+
+urlpatterns += router.urls

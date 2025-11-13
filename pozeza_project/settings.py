@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-@ptjwd9d(l-2wc!pdy^6q^x$p#ep#n)26@%yd@20k^r3n4@k4x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.ngrok-free.dev']
 
 
 # Application definition
@@ -87,12 +87,11 @@ WSGI_APPLICATION = 'pozeza_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE':   'django.db.backends.mysql',
-        'NAME':     'pozezas',
+        'NAME':     'dsns',
         'USER':     'root',
         'PASSWORD': 'test_pass',
-        'HOST':     'localhost',
+        'HOST':     '127.0.0.1',
         'PORT':     '3307',
-        # 'OPTIONS': {'charset': 'utf8mb4'},  # за бажанням
     }
 }
 
@@ -160,3 +159,12 @@ SIMPLE_JWT = {
 
 # CORS (DEV)
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+
+
+# ковзна (sliding) сесія, хвилин
+AUTH_SESSION_EXP_MIN = 10
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
